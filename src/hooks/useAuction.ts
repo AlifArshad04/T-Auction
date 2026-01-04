@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { socketService } from '../services/socket';
 import { playerApi, teamApi, auctionApi } from '../services/api';
 import { Player, Team, AuctionState, PlayerStatus, PlayerCategory } from '../../types';
@@ -325,7 +325,10 @@ export function useAuction(): UseAuctionReturn {
   const bulkUploadPhotos = useCallback(async (files: FileList) => {
     try {
       await playerApi.bulkUploadPhotos(files);
-      // Server will broadcast the update
+      // Immediately fetch updated players to update local state
+      const updatedPlayers = await playerApi.getAll();
+      setPlayers(updatedPlayers.players.map(normalizePlayer));
+      // Server will also broadcast the update for other clients
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to bulk upload photos');
       throw err;
@@ -335,8 +338,11 @@ export function useAuction(): UseAuctionReturn {
   const importPlayers = useCallback(
     async (newPlayers: Omit<Player, 'id' | 'status' | 'basePrice'>[]) => {
       try {
-        await playerApi.bulkImport(newPlayers);
-        // Server will broadcast the update
+        const result = await playerApi.bulkImport(newPlayers);
+        // Immediately fetch updated players to update local state
+        const updatedPlayers = await playerApi.getAll();
+        setPlayers(updatedPlayers.players.map(normalizePlayer));
+        // Server will also broadcast the update for other clients
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to import players');
         throw err;
@@ -348,7 +354,9 @@ export function useAuction(): UseAuctionReturn {
   const clearAllPlayers = useCallback(async () => {
     try {
       await playerApi.deleteAll();
-      // Server will broadcast the update
+      // Immediately clear local state
+      setPlayers([]);
+      // Server will also broadcast the update for other clients
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear players');
       throw err;
