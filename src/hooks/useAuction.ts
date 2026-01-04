@@ -121,6 +121,7 @@ export function useAuction(): UseAuctionReturn {
       if (data.teams) setTeams(data.teams.map(normalizeTeam));
       if (data.auctionState) setAuction(normalizeAuction(data.auctionState));
       setIsLoading(false);
+      clearTimeout(loadingTimeout);
     });
 
     // Handle full state sync
@@ -129,7 +130,18 @@ export function useAuction(): UseAuctionReturn {
       if (data.teams) setTeams(data.teams.map(normalizeTeam));
       if (data.auctionState) setAuction(normalizeAuction(data.auctionState));
       setIsLoading(false);
+      clearTimeout(loadingTimeout);
     });
+
+    // Timeout to stop loading if server doesn't respond within 10 seconds
+    const loadingTimeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 10000);
+
+    // Clear timeout when component unmounts or when loading is set to false
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
 
     // Auction events
     socket.on(SERVER_EVENTS.AUCTION_STARTED, (data: any) => {
