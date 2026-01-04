@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import * as auctionController from '../controllers/auctionController';
+import { requireAdminAuth } from '../middleware/authMiddleware';
 
 const router = Router();
+
+// POST /api/auction/verify-auth - Verify admin authentication
+router.post('/verify-auth', requireAdminAuth, (req, res) => {
+  res.json({ success: true, message: 'Authentication verified' });
+});
 
 // GET /api/auction/state - Get current auction state
 router.get('/state', auctionController.getAuctionState);
@@ -28,9 +34,9 @@ router.post('/finalize', auctionController.finalizeSale);
 router.post('/unsold', auctionController.markUnsold);
 
 // POST /api/auction/force-sell - Force sell player to team at specific amount (admin only)
-router.post('/force-sell', auctionController.forceSell);
+router.post('/force-sell', requireAdminAuth, auctionController.forceSell);
 
 // POST /api/auction/reset - Reset auction state
-router.post('/reset', auctionController.resetAuction);
+router.post('/reset', requireAdminAuth, auctionController.resetAuction);
 
 export default router;

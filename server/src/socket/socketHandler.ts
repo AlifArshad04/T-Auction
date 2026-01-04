@@ -1,10 +1,16 @@
 import { Server, Socket } from 'socket.io';
 import { CLIENT_EVENTS, SERVER_EVENTS } from './socketEvents';
 import { auctionService } from '../services/auctionService';
+import { verifyAdminAuth } from '../middleware/authMiddleware';
 
 export function initializeSocketHandlers(io: Server): void {
   io.on('connection', async (socket: Socket) => {
     console.log(`Client connected: ${socket.id}`);
+
+    // Helper function to check admin authentication
+    const isAdminAuthenticated = (authHeader?: string): boolean => {
+      return verifyAdminAuth(authHeader);
+    };
 
     // Send current full state to newly connected client
     try {
@@ -204,8 +210,13 @@ export function initializeSocketHandlers(io: Server): void {
       }
     });
 
-    // Force Sell
-    socket.on(CLIENT_EVENTS.FORCE_SELL, async (data: { playerId: string; teamId: string; amount: number }) => {
+    // Force Sell (Admin only)
+    socket.on(CLIENT_EVENTS.FORCE_SELL, async (data: { playerId: string; teamId: string; amount: number; auth?: string }) => {
+      if (!isAdminAuthenticated(data.auth)) {
+        socket.emit(SERVER_EVENTS.ERROR, { message: 'Admin authentication required' });
+        return;
+      }
+
       try {
         const result = await auctionService.forceSell(data.playerId, data.teamId, data.amount);
         if (result.success) {
@@ -222,8 +233,13 @@ export function initializeSocketHandlers(io: Server): void {
       }
     });
 
-    // Reset Full Auction
-    socket.on(CLIENT_EVENTS.RESET_AUCTION, async () => {
+    // Reset Full Auction (Admin only)
+    socket.on(CLIENT_EVENTS.RESET_AUCTION, async (data: { auth?: string } = {}) => {
+      if (!isAdminAuthenticated(data.auth)) {
+        socket.emit(SERVER_EVENTS.ERROR, { message: 'Admin authentication required' });
+        return;
+      }
+
       console.log('Server received RESET_AUCTION');
       try {
         const fullState = await auctionService.resetFullAuction();

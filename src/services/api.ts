@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:4000/api';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -8,13 +8,18 @@ interface ApiResponse<T> {
 
 async function fetchApi<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  authHeader?: string
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json'
   };
+
+  if (authHeader) {
+    defaultHeaders['Authorization'] = authHeader;
+  }
 
   const response = await fetch(url, {
     ...options,
@@ -51,11 +56,11 @@ export const playerApi = {
       body: JSON.stringify(data)
     }),
 
-  bulkImport: (players: unknown[]) =>
+  bulkImport: (players: unknown[], authHeader?: string) =>
     fetchApi<{ created: number; failed: number; imagesFound: number }>('/players/bulk', {
       method: 'POST',
       body: JSON.stringify({ players })
-    }),
+    }, authHeader),
 
   update: (id: string, data: Partial<{ name: string; department: string; position: string; category: string; photoId: string }>) =>
     fetchApi<{ player: unknown }>(`/players/${id}`, {
@@ -68,10 +73,10 @@ export const playerApi = {
       method: 'DELETE'
     }),
 
-  deleteAll: () =>
+  deleteAll: (authHeader?: string) =>
     fetchApi<{ deleted: number }>('/players', {
       method: 'DELETE'
-    }),
+    }, authHeader),
 
   uploadPhoto: (id: string, photoData: string) =>
     fetchApi<{ player: unknown }>(`/players/${id}/photo`, {
@@ -79,15 +84,21 @@ export const playerApi = {
       body: JSON.stringify({ photoUrl: photoData })
     }),
 
-  bulkUploadPhotos: async (files: FileList) => {
+  bulkUploadPhotos: async (files: FileList, authHeader?: string) => {
     const formData = new FormData();
     Array.from(files).forEach((file) => {
       formData.append('photos', file);
     });
 
+    const headers: HeadersInit = {};
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
     const response = await fetch(`${API_BASE_URL}/players/photos/bulk`, {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers
     });
 
     const data = await response.json();
@@ -115,11 +126,11 @@ export const teamApi = {
       body: JSON.stringify(data)
     }),
 
-  bulkImport: (teams: unknown[]) =>
+  bulkImport: (teams: unknown[], authHeader?: string) =>
     fetchApi<{ created: number; failed: number }>('/teams/bulk', {
       method: 'POST',
       body: JSON.stringify({ teams })
-    }),
+    }, authHeader),
 
   update: (id: string, data: Partial<{ name: string; owner: string }>) =>
     fetchApi<{ team: unknown }>(`/teams/${id}`, {
@@ -132,10 +143,10 @@ export const teamApi = {
       method: 'DELETE'
     }),
 
-  deleteAll: () =>
+  deleteAll: (authHeader?: string) =>
     fetchApi<{ deleted: number }>('/teams', {
       method: 'DELETE'
-    }),
+    }, authHeader),
 
   uploadLogo: (id: string, logoData: string) =>
     fetchApi<{ team: unknown }>(`/teams/${id}/logo`, {
@@ -143,10 +154,10 @@ export const teamApi = {
       body: JSON.stringify({ logoUrl: logoData })
     }),
 
-  resetBudgets: () =>
+  resetBudgets: (authHeader?: string) =>
     fetchApi<{ success: boolean }>('/teams/reset-budgets', {
       method: 'POST'
-    })
+    }, authHeader)
 };
 
 // Auction API
@@ -189,14 +200,14 @@ export const auctionApi = {
       method: 'POST'
     }),
 
-  forceSell: (playerId: string, teamId: string, amount: number) =>
+  forceSell: (playerId: string, teamId: string, amount: number, authHeader?: string) =>
     fetchApi<{ auctionState: unknown; player: unknown; team: unknown }>('/auction/force-sell', {
       method: 'POST',
       body: JSON.stringify({ playerId, teamId, amount })
-    }),
+    }, authHeader),
 
-  reset: () =>
+  reset: (authHeader?: string) =>
     fetchApi<{ auctionState: unknown }>('/auction/reset', {
       method: 'POST'
-    })
+    }, authHeader)
 };

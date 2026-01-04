@@ -87,7 +87,7 @@ function normalizeAuction(a: any): AuctionState {
   };
 }
 
-export function useAuction(): UseAuctionReturn {
+export function useAuction(authHeader?: string): UseAuctionReturn {
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [auction, setAuction] = useState<AuctionState>({
@@ -298,12 +298,12 @@ export function useAuction(): UseAuctionReturn {
   }, []);
 
   const forceSell = useCallback((playerId: string, teamId: string, amount: number) => {
-    socketService.emit(CLIENT_EVENTS.FORCE_SELL, { playerId, teamId, amount });
-  }, []);
+    socketService.emit(CLIENT_EVENTS.FORCE_SELL, { playerId, teamId, amount, auth: authHeader });
+  }, [authHeader]);
 
   const resetAuction = useCallback(() => {
-    socketService.emit(CLIENT_EVENTS.RESET_AUCTION);
-  }, []);
+    socketService.emit(CLIENT_EVENTS.RESET_AUCTION, { auth: authHeader });
+  }, [authHeader]);
 
   // Player Actions
   const addPlayer = useCallback(
@@ -353,7 +353,7 @@ export function useAuction(): UseAuctionReturn {
 
   const bulkUploadPhotos = useCallback(async (files: FileList) => {
     try {
-      await playerApi.bulkUploadPhotos(files);
+      await playerApi.bulkUploadPhotos(files, authHeader);
       // Immediately fetch updated players to update local state
       const updatedPlayers = await playerApi.getAll();
       setPlayers(updatedPlayers.players.map(normalizePlayer));
@@ -362,12 +362,12 @@ export function useAuction(): UseAuctionReturn {
       setError(err instanceof Error ? err.message : 'Failed to bulk upload photos');
       throw err;
     }
-  }, []);
+  }, [authHeader]);
 
   const importPlayers = useCallback(
     async (newPlayers: Omit<Player, 'id' | 'status' | 'basePrice'>[]): Promise<{ created: number; failed: number; imagesFound: number }> => {
       try {
-        const result = await playerApi.bulkImport(newPlayers);
+        const result = await playerApi.bulkImport(newPlayers, authHeader);
         // Immediately fetch updated players to update local state
         const updatedPlayers = await playerApi.getAll();
         setPlayers(updatedPlayers.players.map(normalizePlayer));
@@ -378,12 +378,12 @@ export function useAuction(): UseAuctionReturn {
         throw err;
       }
     },
-    []
+    [authHeader]
   );
 
   const clearAllPlayers = useCallback(async () => {
     try {
-      await playerApi.deleteAll();
+      await playerApi.deleteAll(authHeader);
       // Immediately clear local state
       setPlayers([]);
       // Server will also broadcast the update for other clients
@@ -391,7 +391,7 @@ export function useAuction(): UseAuctionReturn {
       setError(err instanceof Error ? err.message : 'Failed to clear players');
       throw err;
     }
-  }, []);
+  }, [authHeader]);
 
   // Team Actions
   const addTeam = useCallback(
@@ -437,25 +437,25 @@ export function useAuction(): UseAuctionReturn {
   const importTeams = useCallback(
     async (newTeams: Omit<Team, 'id' | 'remainingBudget'>[]) => {
       try {
-        await teamApi.bulkImport(newTeams);
+        await teamApi.bulkImport(newTeams, authHeader);
         // Server will broadcast the update
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to import teams');
         throw err;
       }
     },
-    []
+    [authHeader]
   );
 
   const clearAllTeams = useCallback(async () => {
     try {
-      await teamApi.deleteAll();
+      await teamApi.deleteAll(authHeader);
       // Server will broadcast the update
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear teams');
       throw err;
     }
-  }, []);
+  }, [authHeader]);
 
   // Utility
   const requestSync = useCallback(() => {

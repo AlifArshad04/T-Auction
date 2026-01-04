@@ -7,7 +7,7 @@ import { TeamManagement } from './components/TeamManagement';
 import { Reports } from './components/Reports';
 import { useAuction } from './src/hooks/useAuction';
 
-const ADMIN_PASSWORD = 'admin123'; // Change this to your desired password
+const ADMIN_USERNAME = 'admin';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'auction' | 'players' | 'teams' | 'reports'>('auction');
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [authHeader, setAuthHeader] = useState<string>('');
 
   const {
     players,
@@ -44,16 +45,38 @@ const App: React.FC = () => {
     clearAllTeams,
     setPlayers,
     setTeams
-  } = useAuction();
+  } = useAuction(isAuthenticated ? authHeader : undefined);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setRole(UserRole.ADMIN);
-      setIsAuthenticated(true);
-      setLoginError('');
-    } else {
-      setLoginError('Incorrect password');
+
+    // Create basic auth header
+    const credentials = btoa(`${ADMIN_USERNAME}:${password}`);
+    const authHeaderValue = `Basic ${credentials}`;
+
+    try {
+      // Test authentication with the dedicated auth verification endpoint
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/auction/verify-auth`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeaderValue,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setRole(UserRole.ADMIN);
+        setIsAuthenticated(true);
+        setAuthHeader(authHeaderValue);
+        setLoginError('');
+      } else if (response.status === 401) {
+        setLoginError('Incorrect password');
+      } else {
+        setLoginError('Authentication failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('Connection failed');
     }
   };
 
