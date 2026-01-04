@@ -54,6 +54,12 @@ export const bulkCreatePlayers = asyncHandler(async (req: Request, res: Response
     throw createError('Players array is required', 400);
   }
 
+  console.log(`Bulk importing ${players.length} players`);
+
+  // Clear existing players first
+  const deletedCount = await playerService.deleteAll();
+  console.log(`Cleared ${deletedCount} existing players`);
+
   const inputs: CreatePlayerInput[] = players.map((p) => ({
     photoId: p.photoId,
     name: p.name,
@@ -63,11 +69,13 @@ export const bulkCreatePlayers = asyncHandler(async (req: Request, res: Response
   }));
 
   const result = await playerService.bulkCreate(inputs);
+  console.log(`Created ${result.created} players, ${result.failed} failed`);
 
   // Fetch all players and broadcast
   const allPlayers = await playerService.getAll();
   const io: Server = req.app.get('io');
   io.emit(SERVER_EVENTS.PLAYERS_BULK_UPDATE, { players: allPlayers, action: 'imported' });
+  console.log(`Broadcasted ${allPlayers.length} players after import`);
 
   res.status(201).json({ success: true, ...result });
 });
@@ -113,11 +121,14 @@ export const deletePlayer = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const deleteAllPlayers = asyncHandler(async (req: Request, res: Response) => {
+  console.log('Clearing all players');
   const count = await playerService.deleteAll();
+  console.log(`Deleted ${count} players`);
 
   // Broadcast to all clients
   const io: Server = req.app.get('io');
   io.emit(SERVER_EVENTS.PLAYERS_BULK_UPDATE, { players: [], action: 'cleared' });
+  console.log('Players cleared broadcast sent');
 
   res.json({ success: true, deleted: count });
 });
@@ -147,16 +158,20 @@ export const uploadPlayerPhoto = asyncHandler(async (req: Request, res: Response
   }
   // Handle base64 upload
   else if (req.body.photoUrl) {
+    console.log('Uploading base64 photo for player:', playerId);
     const result = await uploadBase64Image(req.body.photoUrl, 'players', playerId);
 
     if (!result.success) {
+      console.error('Cloudinary upload failed:', result.error);
       throw createError(result.error || 'Upload failed', 500);
     }
 
+    console.log('Cloudinary upload successful, URL:', result.url);
     const updatedPlayer = await playerService.updatePhoto(playerId, result.url!);
 
     const io: Server = req.app.get('io');
     io.emit(SERVER_EVENTS.PLAYER_UPDATE, { player: updatedPlayer, action: 'updated' });
+    console.log('Player photo update broadcasted');
 
     res.json({ success: true, player: updatedPlayer });
   } else {

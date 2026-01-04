@@ -273,7 +273,7 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
                         {role === UserRole.ADMIN && !auction.isActive && (
                           <button 
                             onClick={() => onStartAuction(p.id)}
-                            className="bg-therap text-white px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition shadow-sm whitespace-nowrap"
+                            className="bg-therap text-white px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition shadow-sm whitespace-nowrap"
                           >
                             Start
                           </button>
