@@ -97,11 +97,20 @@ export function initializeSocketHandlers(io: Server): void {
     socket.on(
       CLIENT_EVENTS.PLACE_BID,
       async (data: { teamId: string; customAmount?: number }) => {
+        console.log('Server received PLACE_BID:', data);
         try {
           const result = await auctionService.placeBid(data.teamId, data.customAmount);
+          console.log('Place bid result:', result);
           if (result.success) {
+            console.log('Emitting BID_PLACED');
             io.emit(SERVER_EVENTS.BID_PLACED, {
-              auctionState: result.auctionState,
+              auctionState: {
+                _id: result.auctionState._id,
+                currentPlayerId: result.auctionState.currentPlayerId?.toString() || null,
+                currentBid: result.auctionState.currentBid,
+                biddingTeamIds: result.auctionState.biddingTeamIds.map((id: any) => id?.toString()),
+                isActive: result.auctionState.isActive
+              },
               teamId: data.teamId,
               bidAmount: result.auctionState?.currentBid
             });
@@ -109,6 +118,7 @@ export function initializeSocketHandlers(io: Server): void {
             socket.emit(SERVER_EVENTS.ERROR, { message: result.error });
           }
         } catch (error) {
+          console.error('Error placing bid:', error);
           socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to place bid' });
         }
       }
@@ -116,17 +126,27 @@ export function initializeSocketHandlers(io: Server): void {
 
     // Match Bid
     socket.on(CLIENT_EVENTS.MATCH_BID, async (data: { teamId: string }) => {
+      console.log('Server received MATCH_BID:', data);
       try {
         const result = await auctionService.matchBid(data.teamId);
+        console.log('Match bid result:', result);
         if (result.success) {
+          console.log('Emitting BID_MATCHED');
           io.emit(SERVER_EVENTS.BID_MATCHED, {
-            auctionState: result.auctionState,
+            auctionState: {
+              _id: result.auctionState._id,
+              currentPlayerId: result.auctionState.currentPlayerId?.toString() || null,
+              currentBid: result.auctionState.currentBid,
+              biddingTeamIds: result.auctionState.biddingTeamIds.map((id: any) => id?.toString()),
+              isActive: result.auctionState.isActive
+            },
             teamId: data.teamId
           });
         } else {
           socket.emit(SERVER_EVENTS.ERROR, { message: result.error });
         }
       } catch (error) {
+        console.error('Error matching bid:', error);
         socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to match bid' });
       }
     });

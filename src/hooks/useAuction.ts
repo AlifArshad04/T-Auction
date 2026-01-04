@@ -153,10 +153,12 @@ export function useAuction(): UseAuctionReturn {
     });
 
     socket.on(SERVER_EVENTS.BID_PLACED, (data: any) => {
+      console.log('Received BID_PLACED:', data);
       setAuction(normalizeAuction(data.auctionState));
     });
 
     socket.on(SERVER_EVENTS.BID_MATCHED, (data: any) => {
+      console.log('Received BID_MATCHED:', data);
       setAuction(normalizeAuction(data.auctionState));
     });
 
@@ -261,10 +263,12 @@ export function useAuction(): UseAuctionReturn {
   }, []);
 
   const placeBid = useCallback((teamId: string, customAmount?: number) => {
+    console.log('Placing bid for team:', teamId, 'amount:', customAmount);
     socketService.emit(CLIENT_EVENTS.PLACE_BID, { teamId, customAmount });
   }, []);
 
   const matchBid = useCallback((teamId: string) => {
+    console.log('Matching bid for team:', teamId);
     socketService.emit(CLIENT_EVENTS.MATCH_BID, { teamId });
   }, []);
 

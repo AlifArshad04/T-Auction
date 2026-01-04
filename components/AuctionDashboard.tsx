@@ -51,6 +51,7 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
   const biddingTeams = auction.biddingTeamIds.map(id => teams.find(t => t.id === id)).filter(Boolean) as Team[];
 
   const handleManualBidSubmit = (teamId: string) => {
+    console.log('Manual bid submit for team:', teamId, 'amount:', manualBids[teamId]);
     const amount = parseInt(manualBids[teamId]);
     if (isNaN(amount)) return;
     onIncreaseBid(teamId, amount);
@@ -168,14 +169,20 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
                                 <div className="space-y-2">
                                   <div className="flex gap-2">
                                     <button
-                                      onClick={() => onMatchBid(t.id)}
+                                      onClick={() => {
+                                        console.log('Match bid clicked for team:', t.id);
+                                        onMatchBid(t.id);
+                                      }}
                                       disabled={isLead || auction.biddingTeamIds.length === 0}
                                       className="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
                                     >
                                       Match Bid
                                     </button>
                                     <button
-                                      onClick={() => onIncreaseBid(t.id)}
+                                      onClick={() => {
+                                        console.log('Increase bid clicked for team:', t.id);
+                                        onIncreaseBid(t.id);
+                                      }}
                                       className="flex-1 bg-therap text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-blue-800 disabled:opacity-40 transition shadow-sm"
                                     >
                                       {auction.biddingTeamIds.length === 0 ? 'Start Bid' : `+ ৳ ${nextIncrement}`}
