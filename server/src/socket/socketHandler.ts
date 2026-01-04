@@ -204,6 +204,28 @@ export function initializeSocketHandlers(io: Server): void {
       }
     });
 
+    // Reset Full Auction
+    socket.on(CLIENT_EVENTS.RESET_AUCTION, async () => {
+      console.log('Server received RESET_AUCTION');
+      try {
+        const fullState = await auctionService.resetFullAuction();
+        io.emit(SERVER_EVENTS.AUCTION_RESET, {
+          auctionState: {
+            _id: fullState.auctionState._id,
+            currentPlayerId: null,
+            currentBid: 0,
+            biddingTeamIds: [],
+            isActive: false
+          },
+          players: fullState.players,
+          teams: fullState.teams
+        });
+      } catch (error) {
+        console.error('Error resetting auction:', error);
+        socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to reset auction' });
+      }
+    });
+
     // Broadcast player updates to all other clients
     socket.on(CLIENT_EVENTS.PLAYER_CREATED, (player) => {
       socket.broadcast.emit(SERVER_EVENTS.PLAYER_UPDATE, { player, action: 'created' });

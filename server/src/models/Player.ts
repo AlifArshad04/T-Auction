@@ -19,6 +19,7 @@ export interface IPlayer extends Document {
   department: string;
   position: string;
   category: PlayerCategory;
+  originalCategory: PlayerCategory;
   basePrice: number;
   status: PlayerStatus;
   photoUrl?: string;
@@ -39,6 +40,10 @@ const PlayerSchema = new Schema<IPlayer>(
       type: String,
       enum: Object.values(PlayerCategory),
       required: true
+    },
+    originalCategory: {
+      type: String,
+      enum: Object.values(PlayerCategory)
     },
     basePrice: { type: Number, required: true },
     status: {

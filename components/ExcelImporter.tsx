@@ -3,9 +3,15 @@ import * as XLSX from 'xlsx';
 import { Player, PlayerStatus, PlayerCategory } from '../types';
 import { CATEGORY_BASE_PRICES } from '../constants';
 
+interface ImportResult {
+  created: number;
+  failed: number;
+  imagesFound: number;
+}
+
 interface ExcelImporterProps {
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
-  onImportPlayers?: (players: any[]) => void | Promise<void>;
+  onImportPlayers?: (players: any[]) => Promise<ImportResult> | void;
 }
 
 export const ExcelImporter: React.FC<ExcelImporterProps> = ({ setPlayers, onImportPlayers }) => {
@@ -73,8 +79,19 @@ export const ExcelImporter: React.FC<ExcelImporterProps> = ({ setPlayers, onImpo
         // If API import function is provided, use it
         if (onImportPlayers) {
           try {
-            await onImportPlayers(parsedPlayers);
-            alert(`Successfully imported ${parsedPlayers.length} players!`);
+            const result = await onImportPlayers(parsedPlayers);
+            if (result) {
+              let message = `Successfully imported ${result.created} players!`;
+              if (result.imagesFound > 0) {
+                message += `\n\n${result.imagesFound} existing images were found in Cloudinary and automatically linked.`;
+              }
+              if (result.failed > 0) {
+                message += `\n\n${result.failed} players failed to import.`;
+              }
+              alert(message);
+            } else {
+              alert(`Successfully imported ${parsedPlayers.length} players!`);
+            }
           } catch (error) {
             console.error("API Import Error:", error);
             alert(error instanceof Error ? error.message : "Error importing players to server");

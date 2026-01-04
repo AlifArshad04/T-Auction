@@ -8,6 +8,12 @@ export interface UploadResult {
   error?: string;
 }
 
+// Sanitize a string to be safe for Cloudinary public_id
+export function sanitizePublicId(id: string): string {
+  // Replace any non-alphanumeric characters (except - and _) with underscores
+  return id.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
 export async function uploadImage(
   buffer: Buffer,
   folder: string,
@@ -81,4 +87,47 @@ export async function deleteImage(publicId: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export interface ImageCheckResult {
+  exists: boolean;
+  url?: string;
+  publicId?: string;
+}
+
+// Check if an image exists in Cloudinary and return its URL
+export async function checkImageExists(
+  folder: string,
+  filename: string
+): Promise<ImageCheckResult> {
+  const publicId = `t-auction/${folder}/${filename}`;
+  try {
+    const result = await cloudinary.api.resource(publicId);
+    return {
+      exists: true,
+      url: result.secure_url,
+      publicId: result.public_id
+    };
+  } catch {
+    return { exists: false };
+  }
+}
+
+// Check multiple images in Cloudinary and return URLs for existing ones
+export async function checkMultipleImagesExist(
+  folder: string,
+  filenames: string[]
+): Promise<Map<string, string>> {
+  const results = new Map<string, string>();
+
+  // Use Promise.allSettled to check all images in parallel
+  const checks = filenames.map(async (filename) => {
+    const result = await checkImageExists(folder, filename);
+    if (result.exists && result.url) {
+      results.set(filename, result.url);
+    }
+  });
+
+  await Promise.allSettled(checks);
+  return results;
 }

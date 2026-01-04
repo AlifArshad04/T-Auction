@@ -14,10 +14,11 @@ interface AuctionDashboardProps {
   onFinalizeSale: () => void;
   onMarkUnsold?: () => void;
   onTieLottery: () => void;
+  onResetAuction?: () => void;
 }
 
 export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
-  players, teams, auction, role, onStartAuction, onIncreaseBid, onMatchBid, onFinalizeSale, onMarkUnsold, onTieLottery
+  players, teams, auction, role, onStartAuction, onIncreaseBid, onMatchBid, onFinalizeSale, onMarkUnsold, onTieLottery, onResetAuction
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<'ALL' | PlayerCategory>('ALL');
@@ -60,6 +61,12 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
 
   const nextIncrement = currentPlayer ? getDynamicIncrement(currentPlayer.category, auction.currentBid) : 0;
 
+  const handleResetAuction = () => {
+    if (window.confirm('Are you sure you want to reset the entire auction? This will:\n\n- Reset all players to UNSOLD status\n- Clear all sold prices and team assignments\n- Reset all team budgets to initial values\n- Reset auction rounds\n\nThis action cannot be undone!')) {
+      onResetAuction?.();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Stats - Simplified to only Players Sold */}
@@ -68,10 +75,20 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
           <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Tournament Progress</p>
           <h2 className="text-3xl font-black text-slate-800">Players Sold</h2>
         </div>
-        <div className="text-right">
-          <p className="text-5xl font-black text-therap">
-            {totalSold} <span className="text-xl text-slate-300">/ {players.length}</span>
-          </p>
+        <div className="flex items-center gap-4">
+          {role === UserRole.ADMIN && !auction.isActive && (
+            <button
+              onClick={handleResetAuction}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-sm"
+            >
+              Reset Auction
+            </button>
+          )}
+          <div className="text-right">
+            <p className="text-5xl font-black text-therap">
+              {totalSold} <span className="text-xl text-slate-300">/ {players.length}</span>
+            </p>
+          </div>
         </div>
       </div>
 

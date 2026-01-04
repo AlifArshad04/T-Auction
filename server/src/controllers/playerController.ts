@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Server } from 'socket.io';
 import { playerService, CreatePlayerInput } from '../services/playerService';
-import { uploadImage, uploadBase64Image } from '../services/uploadService';
+import { uploadImage, uploadBase64Image, checkImageExists, sanitizePublicId } from '../services/uploadService';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { SERVER_EVENTS } from '../socket/socketEvents';
 import { PlayerCategory } from '../models/Player';
@@ -71,13 +71,41 @@ export const bulkCreatePlayers = asyncHandler(async (req: Request, res: Response
   const result = await playerService.bulkCreate(inputs);
   console.log(`Created ${result.created} players, ${result.failed} failed`);
 
-  // Fetch all players and broadcast
-  const allPlayers = await playerService.getAll();
+  // Fetch all players
+  let allPlayers = await playerService.getAll();
+
+  // Check Cloudinary for existing images by photoId and update players
+  console.log('Checking Cloudinary for existing player images...');
+  let imagesFound = 0;
+
+  const imageChecks = allPlayers.map(async (player) => {
+    // Only check if player has a photoId
+    if (!player.photoId) return false;
+
+    const sanitizedPhotoId = sanitizePublicId(player.photoId);
+    const imageResult = await checkImageExists('players', sanitizedPhotoId);
+    if (imageResult.exists && imageResult.url) {
+      await playerService.updatePhoto(player._id.toString(), imageResult.url);
+      imagesFound++;
+      return true;
+    }
+    return false;
+  });
+
+  await Promise.allSettled(imageChecks);
+  console.log(`Found ${imagesFound} existing images in Cloudinary`);
+
+  // Re-fetch players with updated photo URLs
+  if (imagesFound > 0) {
+    allPlayers = await playerService.getAll();
+  }
+
+  // Broadcast to all clients
   const io: Server = req.app.get('io');
   io.emit(SERVER_EVENTS.PLAYERS_BULK_UPDATE, { players: allPlayers, action: 'imported' });
   console.log(`Broadcasted ${allPlayers.length} players after import`);
 
-  res.status(201).json({ success: true, ...result });
+  res.status(201).json({ success: true, ...result, imagesFound });
 });
 
 export const updatePlayer = asyncHandler(async (req: Request, res: Response) => {
@@ -141,9 +169,14 @@ export const uploadPlayerPhoto = asyncHandler(async (req: Request, res: Response
     throw createError('Player not found', 404);
   }
 
+  // Use photoId as Cloudinary filename if available, otherwise use player _id
+  const cloudinaryFilename = player.photoId
+    ? sanitizePublicId(player.photoId)
+    : playerId;
+
   // Handle multipart file upload
   if (req.file) {
-    const result = await uploadImage(req.file.buffer, 'players', playerId);
+    const result = await uploadImage(req.file.buffer, 'players', cloudinaryFilename);
 
     if (!result.success) {
       throw createError(result.error || 'Upload failed', 500);
@@ -159,7 +192,7 @@ export const uploadPlayerPhoto = asyncHandler(async (req: Request, res: Response
   // Handle base64 upload
   else if (req.body.photoUrl) {
     console.log('Uploading base64 photo for player:', playerId);
-    const result = await uploadBase64Image(req.body.photoUrl, 'players', playerId);
+    const result = await uploadBase64Image(req.body.photoUrl, 'players', cloudinaryFilename);
 
     if (!result.success) {
       console.error('Cloudinary upload failed:', result.error);
@@ -199,7 +232,9 @@ export const bulkUploadPhotos = asyncHandler(async (req: Request, res: Response)
       continue;
     }
 
-    const result = await uploadImage(file.buffer, 'players', player._id.toString());
+    // Use sanitized photoId as Cloudinary filename so images persist across reimports
+    const sanitizedPhotoId = sanitizePublicId(photoId);
+    const result = await uploadImage(file.buffer, 'players', sanitizedPhotoId);
     if (result.success && result.url) {
       await playerService.updatePhoto(player._id.toString(), result.url);
       updated++;

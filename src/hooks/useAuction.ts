@@ -21,13 +21,14 @@ interface UseAuctionReturn {
   runLottery: () => void;
   finalizeSale: () => void;
   markUnsold: () => void;
+  resetAuction: () => void;
 
   // Player Actions
   addPlayer: (player: Omit<Player, 'id' | 'status' | 'basePrice'>) => Promise<void>;
   updatePlayer: (player: Player) => Promise<void>;
   updatePlayerPhoto: (playerId: string, photoUrl: string) => Promise<void>;
   bulkUploadPhotos: (files: FileList) => Promise<void>;
-  importPlayers: (players: Omit<Player, 'id' | 'status' | 'basePrice'>[]) => Promise<void>;
+  importPlayers: (players: Omit<Player, 'id' | 'status' | 'basePrice'>[]) => Promise<{ created: number; failed: number; imagesFound: number }>;
   clearAllPlayers: () => Promise<void>;
 
   // Team Actions
@@ -55,6 +56,7 @@ function normalizePlayer(p: any): Player {
     department: p.department,
     position: p.position,
     category: p.category as PlayerCategory,
+    originalCategory: p.originalCategory as PlayerCategory,
     basePrice: p.basePrice,
     status: p.status as PlayerStatus,
     photoUrl: p.photoUrl,
@@ -182,6 +184,17 @@ export function useAuction(): UseAuctionReturn {
       }
     });
 
+    socket.on(SERVER_EVENTS.AUCTION_RESET, (data: any) => {
+      console.log('Received AUCTION_RESET:', data);
+      setAuction(normalizeAuction(data.auctionState));
+      if (data.players) {
+        setPlayers(data.players.map(normalizePlayer));
+      }
+      if (data.teams) {
+        setTeams(data.teams.map(normalizeTeam));
+      }
+    });
+
     // Player events
     socket.on(SERVER_EVENTS.PLAYER_UPDATE, (data: any) => {
       if (data.action === 'created' && data.player) {
@@ -283,6 +296,10 @@ export function useAuction(): UseAuctionReturn {
     socketService.emit(CLIENT_EVENTS.MARK_UNSOLD);
   }, []);
 
+  const resetAuction = useCallback(() => {
+    socketService.emit(CLIENT_EVENTS.RESET_AUCTION);
+  }, []);
+
   // Player Actions
   const addPlayer = useCallback(
     async (newPlayer: Omit<Player, 'id' | 'status' | 'basePrice'>) => {
@@ -343,13 +360,14 @@ export function useAuction(): UseAuctionReturn {
   }, []);
 
   const importPlayers = useCallback(
-    async (newPlayers: Omit<Player, 'id' | 'status' | 'basePrice'>[]) => {
+    async (newPlayers: Omit<Player, 'id' | 'status' | 'basePrice'>[]): Promise<{ created: number; failed: number; imagesFound: number }> => {
       try {
         const result = await playerApi.bulkImport(newPlayers);
         // Immediately fetch updated players to update local state
         const updatedPlayers = await playerApi.getAll();
         setPlayers(updatedPlayers.players.map(normalizePlayer));
         // Server will also broadcast the update for other clients
+        return result;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to import players');
         throw err;
@@ -459,6 +477,7 @@ export function useAuction(): UseAuctionReturn {
     runLottery,
     finalizeSale,
     markUnsold,
+    resetAuction,
 
     // Player Actions
     addPlayer,

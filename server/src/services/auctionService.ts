@@ -264,6 +264,48 @@ class AuctionService {
     return { success: true, auctionState: state };
   }
 
+  async resetFullAuction(): Promise<FullState> {
+    // Reset all players to initial state and restore original category
+    const players = await Player.find();
+    for (const player of players) {
+      // Restore original category if it was changed (e.g., Cat A downgraded to Cat B)
+      if (player.originalCategory) {
+        player.category = player.originalCategory;
+      }
+      player.basePrice = CATEGORY_BASE_PRICES[player.category as keyof typeof CATEGORY_BASE_PRICES];
+      player.status = PlayerStatus.UNSOLD;
+      player.auctionRound = 1;
+      player.soldPrice = undefined;
+      player.teamId = undefined;
+      await player.save();
+    }
+
+    // Reset all teams' remaining budget to initial budget
+    const teams = await Team.find();
+    for (const team of teams) {
+      team.remainingBudget = team.initialBudget;
+      await team.save();
+    }
+
+    // Reset auction state
+    const state = await getAuctionState();
+    state.currentPlayerId = null;
+    state.currentBid = 0;
+    state.biddingTeamIds = [];
+    state.isActive = false;
+    await state.save();
+
+    // Return full state
+    const updatedPlayers = await Player.find().sort({ category: 1, name: 1 });
+    const updatedTeams = await Team.find().sort({ name: 1 });
+
+    return {
+      auctionState: state,
+      players: updatedPlayers,
+      teams: updatedTeams
+    };
+  }
+
   async getFullState(): Promise<FullState> {
     const [auctionState, players, teams] = await Promise.all([
       getAuctionState(),

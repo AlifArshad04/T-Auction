@@ -10,6 +10,7 @@ export const CLIENT_EVENTS = {
   RUN_LOTTERY: 'client:run_lottery',
   FINALIZE_SALE: 'client:finalize_sale',
   MARK_UNSOLD: 'client:mark_unsold',
+  RESET_AUCTION: 'client:reset_auction',
 
   // CRUD operations that need real-time sync
   PLAYER_CREATED: 'client:player_created',
@@ -41,6 +42,7 @@ export const SERVER_EVENTS = {
   BID_MATCHED: 'server:bid_matched',
   LOTTERY_RESULT: 'server:lottery_result',
   SALE_FINALIZED: 'server:sale_finalized',
+  AUCTION_RESET: 'server:auction_reset',
 
   // Entity updates
   PLAYER_UPDATE: 'server:player_update',

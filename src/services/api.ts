@@ -52,7 +52,7 @@ export const playerApi = {
     }),
 
   bulkImport: (players: unknown[]) =>
-    fetchApi<{ created: number; failed: number }>('/players/bulk', {
+    fetchApi<{ created: number; failed: number; imagesFound: number }>('/players/bulk', {
       method: 'POST',
       body: JSON.stringify({ players })
     }),

@@ -18,6 +18,7 @@ export interface Player {
   department: string;
   position: string;
   category: PlayerCategory;
+  originalCategory?: PlayerCategory; // Original category for reset purposes
   basePrice: number;
   status: PlayerStatus;
   photoUrl?: string;

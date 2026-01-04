@@ -29,6 +29,7 @@ const App: React.FC = () => {
     runLottery,
     finalizeSale,
     markUnsold,
+    resetAuction,
     addPlayer,
     updatePlayer,
     updatePlayerPhoto,
@@ -141,6 +142,7 @@ const App: React.FC = () => {
           onFinalizeSale={finalizeSale}
           onMarkUnsold={markUnsold}
           onTieLottery={runLottery}
+          onResetAuction={resetAuction}
         />
       )}
       {activeTab === 'players' && (

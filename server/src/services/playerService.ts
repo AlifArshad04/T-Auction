@@ -41,6 +41,7 @@ class PlayerService {
 
     const player = new Player({
       ...input,
+      originalCategory: input.category,
       basePrice,
       status: PlayerStatus.UNSOLD,
       auctionRound: 1
