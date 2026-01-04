@@ -5,11 +5,12 @@ import { ExcelImporter } from './ExcelImporter';
 
 interface PlayerManagementProps {
   players: Player[];
-  onAddPlayer: (player: any) => void;
-  onUpdatePlayer: (player: Player) => void;
-  onUpdatePhoto: (id: string, url: string) => void;
-  setPlayers: (players: Player[]) => void;
-  onClearAll: () => void;
+  onAddPlayer: (player: any) => void | Promise<void>;
+  onUpdatePlayer: (player: Player) => void | Promise<void>;
+  onUpdatePhoto: (id: string, url: string) => void | Promise<void>;
+  onImportPlayers?: (players: any[]) => void | Promise<void>;
+  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+  onClearAll: () => void | Promise<void>;
   role: UserRole;
 }
 
@@ -59,8 +60,8 @@ const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<s
   });
 };
 
-export const PlayerManagement: React.FC<PlayerManagementProps> = ({ 
-  players, onAddPlayer, onUpdatePlayer, onUpdatePhoto, setPlayers, onClearAll, role 
+export const PlayerManagement: React.FC<PlayerManagementProps> = ({
+  players, onAddPlayer, onUpdatePlayer, onUpdatePhoto, onImportPlayers, setPlayers, onClearAll, role
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
@@ -207,7 +208,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({
             >
               Clear All Data
             </button>
-            <ExcelImporter setPlayers={setPlayers} />
+            <ExcelImporter setPlayers={setPlayers} onImportPlayers={onImportPlayers} />
             
             {players.length > 0 && (
               <div className="relative">

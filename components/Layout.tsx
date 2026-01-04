@@ -8,15 +8,20 @@ interface LayoutProps {
   setActiveTab: (tab: any) => void;
   role: UserRole;
   setRole: (role: UserRole) => void;
+  isConnected?: boolean;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, role, setRole }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, role, setRole, isConnected = true }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-therap text-white shadow-lg p-4 flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-therap font-bold">T</div>
           <h1 className="text-xl font-bold tracking-tight">Therap Football Auction</h1>
+          <div className={`flex items-center space-x-1.5 px-2 py-1 rounded-full text-[10px] font-bold ${isConnected ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'}`}>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+            <span>{isConnected ? 'LIVE' : 'OFFLINE'}</span>
+          </div>
         </div>
         
         <nav className="hidden md:flex space-x-6 font-medium">

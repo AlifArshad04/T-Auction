@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { Team, UserRole } from '../types';
@@ -6,10 +5,13 @@ import { DEFAULT_TEAM_BUDGET } from '../constants';
 
 interface TeamManagementProps {
   teams: Team[];
-  setTeams: (teams: Team[]) => void;
+  setTeams: React.Dispatch<React.SetStateAction<Team[]>>;
+  onAddTeam?: (team: Omit<Team, 'id' | 'remainingBudget'>) => void | Promise<void>;
+  onUpdateTeam?: (team: Team) => void | Promise<void>;
+  onImportTeams?: (teams: Omit<Team, 'id' | 'remainingBudget'>[]) => void | Promise<void>;
   role: UserRole;
-  onUpdateLogo: (id: string, url: string) => void;
-  onClearAll: () => void;
+  onUpdateLogo: (id: string, url: string) => void | Promise<void>;
+  onClearAll: () => void | Promise<void>;
 }
 
 const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
@@ -52,19 +54,39 @@ const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<s
   });
 };
 
-export const TeamManagement: React.FC<TeamManagementProps> = ({ teams, setTeams, role, onUpdateLogo, onClearAll }) => {
+export const TeamManagement: React.FC<TeamManagementProps> = ({
+  teams, setTeams, onAddTeam, onUpdateTeam, onImportTeams, role, onUpdateLogo, onClearAll
+}) => {
   const [showForm, setShowForm] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: '', owner: '', initialBudget: DEFAULT_TEAM_BUDGET });
   const excelInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddTeam = (e: React.FormEvent) => {
+  const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    const team: Team = {
-      ...newTeam,
-      id: crypto.randomUUID(),
-      remainingBudget: newTeam.initialBudget
-    };
-    setTeams([...teams, team]);
+
+    if (onAddTeam) {
+      try {
+        await onAddTeam({
+          name: newTeam.name,
+          owner: newTeam.owner,
+          initialBudget: newTeam.initialBudget
+        });
+      } catch (error) {
+        console.error("Error adding team:", error);
+        alert(error instanceof Error ? error.message : "Failed to add team");
+        return;
+      }
+    } else {
+      // Fallback to local state
+      const team: Team = {
+        ...newTeam,
+        id: crypto.randomUUID(),
+        remainingBudget: newTeam.initialBudget
+      };
+      setTeams((prev) => [...prev, team]);
+    }
+
     setNewTeam({ name: '', owner: '', initialBudget: DEFAULT_TEAM_BUDGET });
     setShowForm(false);
   };
@@ -74,7 +96,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ teams, setTeams,
     if (file) {
       try {
         const resizedBase64 = await resizeImage(file, 400, 400);
-        onUpdateLogo(teamId, resizedBase64);
+        await onUpdateLogo(teamId, resizedBase64);
       } catch (error) {
         console.error("Error resizing logo:", error);
         alert("Failed to process logo.");
@@ -82,42 +104,59 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ teams, setTeams,
     }
   };
 
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsImporting(true);
+
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(ws) as any[];
 
-        const importedTeams: Team[] = data.map(item => {
+        const parsedTeams = data.map(item => {
           const name = item['Team Name'] || item['Name'] || 'New Team';
           const owner = item['Team Owner'] || item['Owner Name'] || item['Owner'] || item['Dept'] || item['Department'] || 'Unknown Owner';
           const budget = Number(item['Initial Budget'] || item['Starting Budget'] || item['Budget'] || DEFAULT_TEAM_BUDGET);
-          
+
           return {
-            id: crypto.randomUUID(),
             name: String(name).trim(),
             owner: String(owner).trim(),
-            initialBudget: isNaN(budget) ? DEFAULT_TEAM_BUDGET : budget,
-            remainingBudget: isNaN(budget) ? DEFAULT_TEAM_BUDGET : budget
+            initialBudget: isNaN(budget) ? DEFAULT_TEAM_BUDGET : budget
           };
         });
 
-        if (importedTeams.length === 0) {
+        if (parsedTeams.length === 0) {
           alert("No valid team data found.");
           return;
         }
 
-        setTeams(importedTeams);
-        alert(`Successfully imported ${importedTeams.length} teams!`);
+        if (onImportTeams) {
+          try {
+            await onImportTeams(parsedTeams);
+            alert(`Successfully imported ${parsedTeams.length} teams!`);
+          } catch (error) {
+            console.error("API Import Error:", error);
+            alert(error instanceof Error ? error.message : "Error importing teams to server");
+          }
+        } else {
+          // Fallback to local state
+          const importedTeams: Team[] = parsedTeams.map(t => ({
+            ...t,
+            id: crypto.randomUUID(),
+            remainingBudget: t.initialBudget
+          }));
+          setTeams(importedTeams);
+          alert(`Successfully imported ${importedTeams.length} teams!`);
+        }
       } catch (err) {
         alert("Error parsing Team Excel file.");
       } finally {
+        setIsImporting(false);
         if (excelInputRef.current) excelInputRef.current.value = '';
       }
     };
@@ -130,27 +169,28 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ teams, setTeams,
         <h2 className="text-2xl font-bold text-slate-800">Team Registry</h2>
         {role === UserRole.ADMIN && (
           <div className="flex flex-wrap gap-3">
-            <button 
-              onClick={onClearAll}
+            <button
+              onClick={() => onClearAll()}
               className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold hover:bg-red-100 transition shadow-sm text-sm"
             >
               Clear All Teams
             </button>
-            <button 
+            <button
               onClick={() => excelInputRef.current?.click()}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow flex items-center text-sm"
+              disabled={isImporting}
+              className={`bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow flex items-center text-sm ${isImporting ? 'opacity-50 cursor-wait' : ''}`}
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-              Import Teams
+              {isImporting ? 'Importing...' : 'Import Teams'}
             </button>
-            <input 
-              type="file" 
-              ref={excelInputRef} 
-              className="hidden" 
-              accept=".xlsx,.xls" 
+            <input
+              type="file"
+              ref={excelInputRef}
+              className="hidden"
+              accept=".xlsx,.xls"
               onChange={handleExcelImport}
             />
-            <button 
+            <button
               onClick={() => setShowForm(true)}
               className="bg-therap text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-800 transition shadow text-sm"
             >
@@ -178,11 +218,11 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ teams, setTeams,
                   {role === UserRole.ADMIN && (
                     <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer">
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/png, image/jpeg, image/jpg, image/webp" 
-                        onChange={(e) => handleLogoUpload(team.id, e)} 
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                        onChange={(e) => handleLogoUpload(team.id, e)}
                       />
                     </label>
                   )}
@@ -195,8 +235,8 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ teams, setTeams,
                   <span className="text-therap">৳ {team.remainingBudget}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-therap" 
+                  <div
+                    className="h-full bg-therap"
                     style={{ width: `${(team.remainingBudget / team.initialBudget) * 100}%` }}
                   ></div>
                 </div>
@@ -216,42 +256,42 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ teams, setTeams,
 
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-md">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">Register New Team</h3>
             <form onSubmit={handleAddTeam} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700">Team Name</label>
-                <input 
-                  className="w-full border p-2 rounded mt-1" 
-                  value={newTeam.name} 
-                  onChange={e => setNewTeam({...newTeam, name: e.target.value})} 
+                <input
+                  className="w-full border p-2 rounded mt-1"
+                  value={newTeam.name}
+                  onChange={e => setNewTeam({...newTeam, name: e.target.value})}
                   required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Team Owner</label>
-                <input 
-                  className="w-full border p-2 rounded mt-1" 
-                  value={newTeam.owner} 
-                  onChange={e => setNewTeam({...newTeam, owner: e.target.value})} 
+                <input
+                  className="w-full border p-2 rounded mt-1"
+                  value={newTeam.owner}
+                  onChange={e => setNewTeam({...newTeam, owner: e.target.value})}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Starting Budget (৳)</label>
-                <input 
+                <label className="block text-sm font-medium text-slate-700">Starting Budget</label>
+                <input
                   type="number"
-                  className="w-full border p-2 rounded mt-1" 
-                  value={newTeam.initialBudget} 
-                  onChange={e => setNewTeam({...newTeam, initialBudget: parseInt(e.target.value) || 0})} 
+                  className="w-full border p-2 rounded mt-1"
+                  value={newTeam.initialBudget}
+                  onChange={e => setNewTeam({...newTeam, initialBudget: parseInt(e.target.value) || 0})}
                   required
                 />
               </div>
               <div className="flex space-x-2 pt-2">
                 <button type="submit" className="flex-1 bg-therap text-white py-2 rounded font-bold">Register</button>
-                <button 
-                  type="button" 
-                  onClick={() => setShowForm(false)} 
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
                   className="flex-1 bg-slate-100 text-slate-600 py-2 rounded font-bold"
                 >
                   Cancel

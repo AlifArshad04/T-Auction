@@ -12,11 +12,12 @@ interface AuctionDashboardProps {
   onIncreaseBid: (teamId: string, amount?: number) => void;
   onMatchBid: (teamId: string) => void;
   onFinalizeSale: () => void;
+  onMarkUnsold?: () => void;
   onTieLottery: () => void;
 }
 
-export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({ 
-  players, teams, auction, role, onStartAuction, onIncreaseBid, onMatchBid, onFinalizeSale, onTieLottery
+export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
+  players, teams, auction, role, onStartAuction, onIncreaseBid, onMatchBid, onFinalizeSale, onMarkUnsold, onTieLottery
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<'ALL' | PlayerCategory>('ALL');
@@ -195,7 +196,7 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
                           })}
                         </div>
                         <button
-                          onClick={onFinalizeSale}
+                          onClick={auction.biddingTeamIds.length === 0 ? (onMarkUnsold || onFinalizeSale) : onFinalizeSale}
                           className={`w-full text-white py-4 rounded-xl font-bold text-xl transition shadow-lg mt-2 active:scale-[0.98] ${auction.biddingTeamIds.length === 0 ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-600 hover:bg-red-700'}`}
                         >
                           {auction.biddingTeamIds.length === 0 ? 'MARK UNSOLD' : 'SOLD / FINALIZE'}
