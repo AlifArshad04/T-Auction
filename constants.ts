@@ -9,9 +9,9 @@ export const CATEGORY_BASE_PRICES: Record<PlayerCategory, number> = {
 
 export const MIN_SQUAD_SIZE = 10;
 export const CAT_A_MAX_SPEND = 60000;
-export const MIN_CAT_A = 1;
-export const MIN_CAT_B = 3;
-export const MIN_CAT_C = 4;
+export const MIN_CAT_AB = 5; // Cat A + Cat B combined = exactly 5
+export const MIN_CAT_C = 5;  // Cat C minimum = 5
+export const MIN_BUDGET_AFTER_CAT_B = 25000; // Must have 25k after Cat B auction
 
 export const DEFAULT_TEAM_BUDGET = 130000;
 

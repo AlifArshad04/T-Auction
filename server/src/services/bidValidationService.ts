@@ -4,9 +4,9 @@ import {
   CATEGORY_BASE_PRICES,
   CAT_A_MAX_SPEND,
   MIN_SQUAD_SIZE,
-  MIN_CAT_A,
-  MIN_CAT_B,
-  MIN_CAT_C
+  MIN_CAT_AB,
+  MIN_CAT_C,
+  MIN_BUDGET_AFTER_CAT_B
 } from '../utils/constants';
 
 export interface ValidationResult {
@@ -51,21 +51,21 @@ export async function validateBid(
 
   if (slotsAfterThisPurchase > 0) {
     // Calculate minimum category requirements after this purchase
-    const willHaveCatA = catAPlayers.length + (player.category === PlayerCategory.A ? 1 : 0);
-    const willHaveCatB = catBPlayers.length + (player.category === PlayerCategory.B ? 1 : 0);
+    // Rule: Cat A + Cat B = 5 (combined), Cat C = 5 minimum
+    const willHaveCatAB = catAPlayers.length + catBPlayers.length +
+      (player.category === PlayerCategory.A || player.category === PlayerCategory.B ? 1 : 0);
     const willHaveCatC = catCPlayers.length + (player.category === PlayerCategory.C ? 1 : 0);
 
-    const needsA = Math.max(0, MIN_CAT_A - willHaveCatA);
-    const needsB = Math.max(0, MIN_CAT_B - willHaveCatB);
+    const needsAB = Math.max(0, MIN_CAT_AB - willHaveCatAB);
     const needsC = Math.max(0, MIN_CAT_C - willHaveCatC);
 
-    const specificSlotsNeeded = needsA + needsB + needsC;
+    const specificSlotsNeeded = needsAB + needsC;
     const genericSlotsNeeded = Math.max(0, slotsAfterThisPurchase - specificSlotsNeeded);
 
     // Calculate minimum reserve required
+    // For Cat A+B slots, use Cat B base price (cheaper option)
     const minReserve =
-      needsA * CATEGORY_BASE_PRICES.A +
-      needsB * CATEGORY_BASE_PRICES.B +
+      needsAB * CATEGORY_BASE_PRICES.B +
       needsC * CATEGORY_BASE_PRICES.C +
       genericSlotsNeeded * CATEGORY_BASE_PRICES.C;
 
@@ -79,7 +79,7 @@ export async function validateBid(
     }
   }
 
-  // Rule 3: End of Category B Budget Rule
+  // Rule 3: End of Category B Budget Rule - must have 25k after Cat B auction ends
   const remainingCatBPlayers = allPlayers.filter(
     (p) => p.category === PlayerCategory.B && p.status === PlayerStatus.UNSOLD
   ).length;
@@ -89,13 +89,12 @@ export async function validateBid(
     (remainingCatBPlayers === 1 && player.category === PlayerCategory.B);
 
   if (isCatBDepleted) {
-    const futureSquadSize = currentSquadSize + 1;
     const futureBudget = team.remainingBudget - bidAmount;
 
-    if (futureSquadSize >= 6 && futureBudget < 20000) {
+    if (futureBudget < MIN_BUDGET_AFTER_CAT_B) {
       return {
         valid: false,
-        error: 'End of Category B rule: Must maintain ৳20,000 budget when squad >= 6 players'
+        error: `End of Category B rule: Must maintain ৳${MIN_BUDGET_AFTER_CAT_B.toLocaleString()} budget after Cat B auction`
       };
     }
   }
