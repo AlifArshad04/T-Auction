@@ -93,7 +93,10 @@ const App: React.FC = () => {
           
           <div className="mt-6 text-center">
             <button
-              onClick={handleViewerMode}
+              onClick={() => {
+                setRole(UserRole.VIEWER);
+                setIsAuthenticated(true);
+              }}
               className="text-[#004a99] hover:text-[#003a7a] underline"
             >
               Continue as Viewer
