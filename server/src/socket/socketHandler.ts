@@ -72,7 +72,7 @@ export function initializeSocketHandlers(io: Server): void {
       try {
         const result = await auctionService.startAuction(data.playerId);
         console.log('Auction start result:', result);
-        if (result.success) {
+        if (result.success && result.auctionState) {
           console.log('Emitting AUCTION_STARTED:', result.auctionState);
           io.emit(SERVER_EVENTS.AUCTION_STARTED, {
             auctionState: {
@@ -101,7 +101,7 @@ export function initializeSocketHandlers(io: Server): void {
         try {
           const result = await auctionService.placeBid(data.teamId, data.customAmount);
           console.log('Place bid result:', result);
-          if (result.success) {
+          if (result.success && result.auctionState) {
             console.log('Emitting BID_PLACED');
             io.emit(SERVER_EVENTS.BID_PLACED, {
               auctionState: {
@@ -112,7 +112,7 @@ export function initializeSocketHandlers(io: Server): void {
                 isActive: result.auctionState.isActive
               },
               teamId: data.teamId,
-              bidAmount: result.auctionState?.currentBid
+              bidAmount: result.auctionState.currentBid
             });
           } else {
             socket.emit(SERVER_EVENTS.ERROR, { message: result.error });
@@ -130,7 +130,7 @@ export function initializeSocketHandlers(io: Server): void {
       try {
         const result = await auctionService.matchBid(data.teamId);
         console.log('Match bid result:', result);
-        if (result.success) {
+        if (result.success && result.auctionState) {
           console.log('Emitting BID_MATCHED');
           io.emit(SERVER_EVENTS.BID_MATCHED, {
             auctionState: {
