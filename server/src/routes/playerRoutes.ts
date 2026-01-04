@@ -27,7 +27,7 @@ router.delete('/:id', playerController.deletePlayer);
 router.delete('/', playerController.deleteAllPlayers);
 
 // POST /api/players/:id/photo - Upload player photo
-router.post('/:id/photo', upload.single('photo'), playerController.uploadPlayerPhoto);
+router.post('/:id/photo', playerController.uploadPlayerPhoto);
 
 // POST /api/players/photos/bulk - Bulk upload photos
 router.post('/photos/bulk', upload.array('photos', 100), playerController.bulkUploadPhotos);

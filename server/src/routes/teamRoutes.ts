@@ -36,6 +36,6 @@ router.delete('/:id', teamController.deleteTeam);
 router.delete('/', teamController.deleteAllTeams);
 
 // POST /api/teams/:id/logo - Upload team logo
-router.post('/:id/logo', upload.single('logo'), teamController.uploadTeamLogo);
+router.post('/:id/logo', teamController.uploadTeamLogo);
 
 export default router;
