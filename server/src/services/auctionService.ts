@@ -21,21 +21,32 @@ export interface FullState {
 
 class AuctionService {
   async startAuction(playerId: string): Promise<AuctionResult> {
+    console.log('Starting auction for playerId:', playerId);
     const player = await Player.findById(playerId);
     if (!player) {
+      console.log('Player not found');
       return { success: false, error: 'Player not found' };
     }
 
     if (player.status === PlayerStatus.SOLD) {
+      console.log('Player already sold');
       return { success: false, error: 'Player already sold' };
     }
 
     if (player.status === PlayerStatus.DISTRIBUTED) {
+      console.log('Player has been distributed');
       return { success: false, error: 'Player has been distributed' };
     }
 
     const state = await getAuctionState();
+    console.log('Current auction state before start:', {
+      isActive: state.isActive,
+      currentPlayerId: state.currentPlayerId,
+      currentBid: state.currentBid
+    });
+
     if (state.isActive) {
+      console.log('Auction already in progress');
       return { success: false, error: 'An auction is already in progress' };
     }
 
@@ -44,6 +55,12 @@ class AuctionService {
     state.biddingTeamIds = [];
     state.isActive = true;
     await state.save();
+
+    console.log('Auction state after start:', {
+      isActive: state.isActive,
+      currentPlayerId: state.currentPlayerId,
+      currentBid: state.currentBid
+    });
 
     return { success: true, auctionState: state, player };
   }

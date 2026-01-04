@@ -11,7 +11,15 @@ export function initializeSocketHandlers(io: Server): void {
       const fullState = await auctionService.getFullState();
       socket.emit(SERVER_EVENTS.CONNECTED, {
         socketId: socket.id,
-        ...fullState
+        auctionState: {
+          _id: fullState.auctionState._id,
+          currentPlayerId: fullState.auctionState.currentPlayerId?.toString() || null,
+          currentBid: fullState.auctionState.currentBid,
+          biddingTeamIds: fullState.auctionState.biddingTeamIds.map((id: any) => id?.toString()),
+          isActive: fullState.auctionState.isActive
+        },
+        players: fullState.players,
+        teams: fullState.teams
       });
     } catch (error) {
       console.error('Error sending initial state:', error);
@@ -22,7 +30,17 @@ export function initializeSocketHandlers(io: Server): void {
       socket.join('auction_room');
       try {
         const state = await auctionService.getFullState();
-        socket.emit(SERVER_EVENTS.FULL_STATE, state);
+        socket.emit(SERVER_EVENTS.FULL_STATE, {
+          auctionState: {
+            _id: state.auctionState._id,
+            currentPlayerId: state.auctionState.currentPlayerId?.toString() || null,
+            currentBid: state.auctionState.currentBid,
+            biddingTeamIds: state.auctionState.biddingTeamIds.map((id: any) => id?.toString()),
+            isActive: state.auctionState.isActive
+          },
+          players: state.players,
+          teams: state.teams
+        });
       } catch (error) {
         socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to get auction state' });
       }
@@ -32,7 +50,17 @@ export function initializeSocketHandlers(io: Server): void {
     socket.on(CLIENT_EVENTS.REQUEST_SYNC, async () => {
       try {
         const state = await auctionService.getFullState();
-        socket.emit(SERVER_EVENTS.FULL_STATE, state);
+        socket.emit(SERVER_EVENTS.FULL_STATE, {
+          auctionState: {
+            _id: state.auctionState._id,
+            currentPlayerId: state.auctionState.currentPlayerId?.toString() || null,
+            currentBid: state.auctionState.currentBid,
+            biddingTeamIds: state.auctionState.biddingTeamIds.map((id: any) => id?.toString()),
+            isActive: state.auctionState.isActive
+          },
+          players: state.players,
+          teams: state.teams
+        });
       } catch (error) {
         socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to sync state' });
       }
@@ -40,17 +68,27 @@ export function initializeSocketHandlers(io: Server): void {
 
     // Start Auction
     socket.on(CLIENT_EVENTS.START_AUCTION, async (data: { playerId: string }) => {
+      console.log('Server received START_AUCTION for player:', data.playerId);
       try {
         const result = await auctionService.startAuction(data.playerId);
+        console.log('Auction start result:', result);
         if (result.success) {
+          console.log('Emitting AUCTION_STARTED:', result.auctionState);
           io.emit(SERVER_EVENTS.AUCTION_STARTED, {
-            auctionState: result.auctionState,
+            auctionState: {
+              _id: result.auctionState._id,
+              currentPlayerId: result.auctionState.currentPlayerId?.toString() || null,
+              currentBid: result.auctionState.currentBid,
+              biddingTeamIds: result.auctionState.biddingTeamIds.map((id: any) => id?.toString()),
+              isActive: result.auctionState.isActive
+            },
             player: result.player
           });
         } else {
           socket.emit(SERVER_EVENTS.ERROR, { message: result.error });
         }
       } catch (error) {
+        console.error('Error starting auction:', error);
         socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to start auction' });
       }
     });

@@ -24,6 +24,12 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
   const [manualBids, setManualBids] = useState<Record<string, string>>({});
   
   const currentPlayer = players.find(p => p.id === auction.currentPlayerId);
+  console.log('AuctionDashboard render:', {
+    auction,
+    currentPlayer,
+    playersCount: players.length,
+    playerIds: players.map(p => p.id)
+  });
   const unsoldPlayers = players.filter(p => (p.status === PlayerStatus.UNSOLD || p.status === PlayerStatus.DISTRIBUTED) && !p.soldPrice);
   const soldPlayers = players.filter(p => p.status === PlayerStatus.SOLD);
   

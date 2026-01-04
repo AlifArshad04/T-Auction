@@ -146,7 +146,10 @@ export function useAuction(): UseAuctionReturn {
 
     // Auction events
     socket.on(SERVER_EVENTS.AUCTION_STARTED, (data: any) => {
-      setAuction(normalizeAuction(data.auctionState));
+      console.log('Received AUCTION_STARTED:', data);
+      const normalized = normalizeAuction(data.auctionState);
+      console.log('Normalized auction state:', normalized);
+      setAuction(normalized);
     });
 
     socket.on(SERVER_EVENTS.BID_PLACED, (data: any) => {
@@ -253,6 +256,7 @@ export function useAuction(): UseAuctionReturn {
 
   // Auction Actions
   const startAuction = useCallback((playerId: string) => {
+    console.log('Starting auction for player:', playerId);
     socketService.emit(CLIENT_EVENTS.START_AUCTION, { playerId });
   }, []);
 
