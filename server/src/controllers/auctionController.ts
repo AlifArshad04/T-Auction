@@ -142,6 +142,39 @@ export const markUnsold = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, auctionState: result.auctionState, player: result.player });
 });
 
+export const forceSell = asyncHandler(async (req: Request, res: Response) => {
+  const { playerId, teamId, amount } = req.body;
+
+  if (!playerId || !teamId || amount === undefined) {
+    throw createError('Player ID, Team ID, and amount are required', 400);
+  }
+
+  if (typeof amount !== 'number' || amount <= 0) {
+    throw createError('Amount must be a positive number', 400);
+  }
+
+  const result = await auctionService.forceSell(playerId, teamId, amount);
+
+  if (!result.success) {
+    throw createError(result.error || 'Failed to force sell player', 400);
+  }
+
+  // Broadcast to all clients
+  const io: Server = req.app.get('io');
+  io.emit(SERVER_EVENTS.SALE_FINALIZED, {
+    auctionState: result.auctionState,
+    player: result.player,
+    team: result.team
+  });
+
+  res.json({
+    success: true,
+    auctionState: result.auctionState,
+    player: result.player,
+    team: result.team
+  });
+});
+
 export const resetAuction = asyncHandler(async (req: Request, res: Response) => {
   const result = await auctionService.resetAuction();
 

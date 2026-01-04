@@ -204,6 +204,24 @@ export function initializeSocketHandlers(io: Server): void {
       }
     });
 
+    // Force Sell
+    socket.on(CLIENT_EVENTS.FORCE_SELL, async (data: { playerId: string; teamId: string; amount: number }) => {
+      try {
+        const result = await auctionService.forceSell(data.playerId, data.teamId, data.amount);
+        if (result.success) {
+          io.emit(SERVER_EVENTS.SALE_FINALIZED, {
+            auctionState: result.auctionState,
+            player: result.player,
+            team: result.team
+          });
+        } else {
+          socket.emit(SERVER_EVENTS.ERROR, { message: result.error });
+        }
+      } catch (error) {
+        socket.emit(SERVER_EVENTS.ERROR, { message: 'Failed to force sell player' });
+      }
+    });
+
     // Reset Full Auction
     socket.on(CLIENT_EVENTS.RESET_AUCTION, async () => {
       console.log('Server received RESET_AUCTION');

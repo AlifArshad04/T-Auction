@@ -15,14 +15,17 @@ interface AuctionDashboardProps {
   onMarkUnsold?: () => void;
   onTieLottery: () => void;
   onResetAuction?: () => void;
+  onForceSell: (playerId: string, teamId: string, amount: number) => void;
 }
 
 export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
-  players, teams, auction, role, onStartAuction, onIncreaseBid, onMatchBid, onFinalizeSale, onMarkUnsold, onTieLottery, onResetAuction
+  players, teams, auction, role, onStartAuction, onIncreaseBid, onMatchBid, onFinalizeSale, onMarkUnsold, onTieLottery, onResetAuction, onForceSell
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<'ALL' | PlayerCategory>('ALL');
   const [manualBids, setManualBids] = useState<Record<string, string>>({});
+  const [forceSellTeamId, setForceSellTeamId] = useState('');
+  const [forceSellAmount, setForceSellAmount] = useState('');
   
   const currentPlayer = players.find(p => p.id === auction.currentPlayerId);
   console.log('AuctionDashboard render:', {
@@ -225,6 +228,51 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
                             );
                           })}
                         </div>
+
+                        {/* Force Sell Section */}
+                        <div className="border-t border-slate-200 pt-4 mt-4">
+                          <p className="text-[10px] font-black text-red-600 uppercase tracking-widest text-center mb-3">Admin Force Sell</p>
+                          <div className="space-y-3">
+                            <select
+                              value={forceSellTeamId}
+                              onChange={(e) => setForceSellTeamId(e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:ring-1 focus:ring-red-500"
+                            >
+                              <option value="">Select Team</option>
+                              {teams.map(team => (
+                                <option key={team.id} value={team.id}>
+                                  {team.name} (৳{team.remainingBudget})
+                                </option>
+                              ))}
+                            </select>
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                placeholder="Enter Amount"
+                                value={forceSellAmount}
+                                onChange={(e) => setForceSellAmount(e.target.value)}
+                                className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:ring-1 focus:ring-red-500"
+                              />
+                              <button
+                                onClick={() => {
+                                  if (!forceSellTeamId || !forceSellAmount || !currentPlayer) return;
+                                  const amount = parseInt(forceSellAmount);
+                                  if (isNaN(amount) || amount <= 0) return;
+                                  if (window.confirm(`Force sell ${currentPlayer.name} to ${teams.find(t => t.id === forceSellTeamId)?.name} for ৳${amount}?`)) {
+                                    onForceSell(currentPlayer.id, forceSellTeamId, amount);
+                                    setForceSellTeamId('');
+                                    setForceSellAmount('');
+                                  }
+                                }}
+                                disabled={!forceSellTeamId || !forceSellAmount || !currentPlayer}
+                                className="bg-red-600 hover:bg-red-700 disabled:bg-slate-300 text-white px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition shadow-sm"
+                              >
+                                Force Sell
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
                         <button
                           onClick={auction.biddingTeamIds.length === 0 ? (onMarkUnsold || onFinalizeSale) : onFinalizeSale}
                           className={`w-full text-white py-4 rounded-xl font-bold text-xl transition shadow-lg mt-2 active:scale-[0.98] ${auction.biddingTeamIds.length === 0 ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-600 hover:bg-red-700'}`}

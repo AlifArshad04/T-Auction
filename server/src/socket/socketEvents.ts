@@ -10,6 +10,7 @@ export const CLIENT_EVENTS = {
   RUN_LOTTERY: 'client:run_lottery',
   FINALIZE_SALE: 'client:finalize_sale',
   MARK_UNSOLD: 'client:mark_unsold',
+  FORCE_SELL: 'client:force_sell',
   RESET_AUCTION: 'client:reset_auction',
 
   // CRUD operations that need real-time sync

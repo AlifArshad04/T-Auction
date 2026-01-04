@@ -252,6 +252,55 @@ class AuctionService {
     };
   }
 
+  async forceSell(playerId: string, teamId: string, amount: number): Promise<AuctionResult> {
+    const state = await getAuctionState();
+    if (!state.isActive || !state.currentPlayerId) {
+      return { success: false, error: 'No active auction' };
+    }
+
+    if (state.currentPlayerId.toString() !== playerId) {
+      return { success: false, error: 'Can only force sell the current player being auctioned' };
+    }
+
+    const player = await Player.findById(playerId);
+    const team = await Team.findById(teamId);
+
+    if (!player) {
+      return { success: false, error: 'Player not found' };
+    }
+
+    if (!team) {
+      return { success: false, error: 'Team not found' };
+    }
+
+    if (player.status === PlayerStatus.SOLD) {
+      return { success: false, error: 'Player already sold' };
+    }
+
+    if (team.remainingBudget < amount) {
+      return { success: false, error: `Team budget insufficient. Available: ৳${team.remainingBudget.toLocaleString()}, Required: ৳${amount.toLocaleString()}` };
+    }
+
+    // Update player
+    player.status = PlayerStatus.SOLD;
+    player.soldPrice = amount;
+    player.teamId = team._id;
+    await player.save();
+
+    // Deduct from team budget
+    team.remainingBudget -= amount;
+    await team.save();
+
+    // Reset auction state
+    state.currentPlayerId = null;
+    state.currentBid = 0;
+    state.biddingTeamIds = [];
+    state.isActive = false;
+    await state.save();
+
+    return { success: true, auctionState: state, player, team };
+  }
+
   async resetAuction(): Promise<AuctionResult> {
     const state = await getAuctionState();
 

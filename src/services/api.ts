@@ -189,6 +189,12 @@ export const auctionApi = {
       method: 'POST'
     }),
 
+  forceSell: (playerId: string, teamId: string, amount: number) =>
+    fetchApi<{ auctionState: unknown; player: unknown; team: unknown }>('/auction/force-sell', {
+      method: 'POST',
+      body: JSON.stringify({ playerId, teamId, amount })
+    }),
+
   reset: () =>
     fetchApi<{ auctionState: unknown }>('/auction/reset', {
       method: 'POST'

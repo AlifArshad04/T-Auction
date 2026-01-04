@@ -21,6 +21,7 @@ interface UseAuctionReturn {
   runLottery: () => void;
   finalizeSale: () => void;
   markUnsold: () => void;
+  forceSell: (playerId: string, teamId: string, amount: number) => void;
   resetAuction: () => void;
 
   // Player Actions
@@ -296,6 +297,10 @@ export function useAuction(): UseAuctionReturn {
     socketService.emit(CLIENT_EVENTS.MARK_UNSOLD);
   }, []);
 
+  const forceSell = useCallback((playerId: string, teamId: string, amount: number) => {
+    socketService.emit(CLIENT_EVENTS.FORCE_SELL, { playerId, teamId, amount });
+  }, []);
+
   const resetAuction = useCallback(() => {
     socketService.emit(CLIENT_EVENTS.RESET_AUCTION);
   }, []);
@@ -477,6 +482,7 @@ export function useAuction(): UseAuctionReturn {
     runLottery,
     finalizeSale,
     markUnsold,
+    forceSell,
     resetAuction,
 
     // Player Actions

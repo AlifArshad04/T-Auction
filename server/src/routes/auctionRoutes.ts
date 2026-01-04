@@ -27,6 +27,9 @@ router.post('/finalize', auctionController.finalizeSale);
 // POST /api/auction/unsold - Mark player as unsold
 router.post('/unsold', auctionController.markUnsold);
 
+// POST /api/auction/force-sell - Force sell player to team at specific amount (admin only)
+router.post('/force-sell', auctionController.forceSell);
+
 // POST /api/auction/reset - Reset auction state
 router.post('/reset', auctionController.resetAuction);
 
