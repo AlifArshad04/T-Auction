@@ -81,7 +81,7 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
           <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200 min-h-[500px]">
             <div className="bg-therap p-4 text-white font-bold flex justify-between items-center px-8 uppercase tracking-widest">
               <span>{auction.isActive ? 'Live Auction' : 'Awaiting Next Player'}</span>
-              {currentPlayer && <span className="text-sm font-black">ROUND: {currentPlayer.auctionRound || 1}</span>}
+              {currentPlayer && auction.isActive && <span className="text-sm font-black">ROUND: {currentPlayer.auctionRound || 1}</span>}
             </div>
             
             <div className="p-8 flex flex-col md:flex-row gap-8 items-center md:items-start h-full">
@@ -96,7 +96,7 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
                     No Photo
                   </div>
                 )}
-                {currentPlayer && (
+                {currentPlayer && auction.isActive && (
                   <div className="absolute top-2 right-2 bg-yellow-400 text-black px-3 py-1 rounded-full font-bold text-[10px] uppercase shadow-md z-10">
                     CAT {currentPlayer.category}
                   </div>
@@ -104,7 +104,7 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
               </div>
 
               <div className="flex-1 space-y-6 text-center md:text-left">
-                {currentPlayer ? (
+                {currentPlayer && auction.isActive ? (
                   <>
                     <div>
                       <h2 className="text-4xl font-extrabold text-slate-800 tracking-tight">{currentPlayer.name}</h2>
@@ -154,7 +154,7 @@ export const AuctionDashboard: React.FC<AuctionDashboardProps> = ({
                       </div>
                     </div>
 
-                    {role === UserRole.ADMIN && (
+                    {role === UserRole.ADMIN && auction.isActive && (
                       <div className="pt-4 space-y-4 border-2 border-blue-500 rounded-xl p-4">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-left">Quick Bidding Controls</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
