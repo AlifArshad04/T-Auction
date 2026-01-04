@@ -139,14 +139,9 @@ export function useAuction(): UseAuctionReturn {
       setIsLoading(false);
     }, 10000);
 
-    // Clear timeout when component unmounts or when loading is set to false
-    return () => {
-      clearTimeout(loadingTimeout);
-    };
-
     // Auction events
     socket.on(SERVER_EVENTS.AUCTION_STARTED, (data: any) => {
-      console.log('Received AUCTION_STARTED:', data);
+      console.log('AUCTION_STARTED event received:', data);
       const normalized = normalizeAuction(data.auctionState);
       console.log('Normalized auction state:', normalized);
       setAuction(normalized);
@@ -171,6 +166,7 @@ export function useAuction(): UseAuctionReturn {
     });
 
     socket.on(SERVER_EVENTS.SALE_FINALIZED, (data: any) => {
+      console.log('Received SALE_FINALIZED:', data);
       setAuction(normalizeAuction(data.auctionState));
       if (data.player) {
         const updatedPlayer = normalizePlayer(data.player);
@@ -233,7 +229,7 @@ export function useAuction(): UseAuctionReturn {
     });
 
     // Fallback: fetch initial data via REST if socket doesn't connect quickly
-    const timeoutId = setTimeout(async () => {
+    const restFallbackTimeout = setTimeout(async () => {
       if (!socketService.isConnected()) {
         console.log('Socket not connected, fetching via REST API');
         try {
@@ -249,8 +245,10 @@ export function useAuction(): UseAuctionReturn {
       }
     }, 3000);
 
+    // Cleanup function
     return () => {
-      clearTimeout(timeoutId);
+      clearTimeout(loadingTimeout);
+      clearTimeout(restFallbackTimeout);
       socketService.disconnect();
       socketInitialized.current = false;
     };
@@ -259,6 +257,7 @@ export function useAuction(): UseAuctionReturn {
   // Auction Actions
   const startAuction = useCallback((playerId: string) => {
     console.log('Starting auction for player:', playerId);
+    console.log('Socket connected:', socketService.isConnected());
     socketService.emit(CLIENT_EVENTS.START_AUCTION, { playerId });
   }, []);
 
