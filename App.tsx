@@ -32,6 +32,7 @@ const App: React.FC = () => {
     addPlayer,
     updatePlayer,
     updatePlayerPhoto,
+    bulkUploadPhotos,
     importPlayers,
     clearAllPlayers,
     addTeam,
@@ -148,6 +149,7 @@ const App: React.FC = () => {
           onAddPlayer={addPlayer}
           onUpdatePlayer={updatePlayer}
           onUpdatePhoto={updatePlayerPhoto}
+          onBulkUploadPhotos={bulkUploadPhotos}
           onImportPlayers={importPlayers}
           setPlayers={setPlayers}
           onClearAll={clearAllPlayers}

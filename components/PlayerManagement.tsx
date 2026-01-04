@@ -9,6 +9,7 @@ interface PlayerManagementProps {
   onUpdatePlayer: (player: Player) => void | Promise<void>;
   onUpdatePhoto: (id: string, url: string) => void | Promise<void>;
   onImportPlayers?: (players: any[]) => void | Promise<void>;
+  onBulkUploadPhotos?: (files: FileList) => void | Promise<void>;
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
   onClearAll: () => void | Promise<void>;
   role: UserRole;
@@ -61,7 +62,7 @@ const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<s
 };
 
 export const PlayerManagement: React.FC<PlayerManagementProps> = ({
-  players, onAddPlayer, onUpdatePlayer, onUpdatePhoto, onImportPlayers, setPlayers, onClearAll, role
+  players, onAddPlayer, onUpdatePlayer, onUpdatePhoto, onImportPlayers, onBulkUploadPhotos, setPlayers, onClearAll, role
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
@@ -142,46 +143,54 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({
     if (!files || files.length === 0) return;
 
     setIsProcessingPhotos(true);
-    let updatedCount = 0;
-    const newPlayers = [...players];
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        const isImage = file.type.startsWith('image/') || 
-                       /\.(jpg|jpeg|png|webp|avif)$/i.test(file.name);
-        if (!isImage) continue;
+      if (onBulkUploadPhotos) {
+        // Use server-side bulk upload to Cloudinary
+        await onBulkUploadPhotos(files);
+        alert(`Bulk photo upload completed! Images have been uploaded to Cloudinary and matched to players by Photo ID.`);
+      } else {
+        // Fallback to local processing (for backward compatibility)
+        let updatedCount = 0;
+        const newPlayers = [...players];
 
-        const fileNameWithExt = file.name;
-        const fileName = fileNameWithExt.substring(0, fileNameWithExt.lastIndexOf('.')).trim();
-        
-        const matchingIndices = newPlayers.reduce((acc: number[], p, idx) => {
-          if (p.photoId && String(p.photoId).toLowerCase().trim() === fileName.toLowerCase()) {
-            acc.push(idx);
-          }
-          return acc;
-        }, []);
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          
+          const isImage = file.type.startsWith('image/') || 
+                         /\.(jpg|jpeg|png|webp|avif)$/i.test(file.name);
+          if (!isImage) continue;
 
-        if (matchingIndices.length > 0) {
-          try {
-            // High resolution (500px) for bulk processing
-            const resizedBase64 = await resizeImage(file, 500, 500);
-            matchingIndices.forEach(idx => {
-              newPlayers[idx] = { ...newPlayers[idx], photoUrl: resizedBase64 };
-              updatedCount++;
-            });
-          } catch (fileErr) {
-            console.warn(`Could not process file ${file.name}:`, fileErr);
+          const fileNameWithExt = file.name;
+          const fileName = fileNameWithExt.substring(0, fileNameWithExt.lastIndexOf('.')).trim();
+          
+          const matchingIndices = newPlayers.reduce((acc: number[], p, idx) => {
+            if (p.photoId && String(p.photoId).toLowerCase().trim() === fileName.toLowerCase()) {
+              acc.push(idx);
+            }
+            return acc;
+          }, []);
+
+          if (matchingIndices.length > 0) {
+            try {
+              // High resolution (500px) for bulk processing
+              const resizedBase64 = await resizeImage(file, 500, 500);
+              matchingIndices.forEach(idx => {
+                newPlayers[idx] = { ...newPlayers[idx], photoUrl: resizedBase64 };
+                updatedCount++;
+              });
+            } catch (fileErr) {
+              console.warn(`Could not process file ${file.name}:`, fileErr);
+            }
           }
         }
-      }
 
-      setPlayers(newPlayers);
-      if (updatedCount > 0) {
-        alert(`Bulk update complete! Successfully assigned high-quality photos to ${updatedCount} profiles.`);
-      } else {
-        alert("No matching Photo IDs found. Ensure filenames match the 'Photo ID' column in Excel.");
+        setPlayers(newPlayers);
+        if (updatedCount > 0) {
+          alert(`Bulk update complete! Successfully assigned high-quality photos to ${updatedCount} profiles.`);
+        } else {
+          alert("No matching Photo IDs found. Ensure filenames match the 'Photo ID' column in Excel.");
+        }
       }
     } catch (error: any) {
       console.error("Bulk photo process error:", error);

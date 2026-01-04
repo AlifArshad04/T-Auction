@@ -7,7 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts",
+    "test-integration": "ts-node --transpile-only src/test-integration.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",

@@ -26,6 +26,7 @@ interface UseAuctionReturn {
   addPlayer: (player: Omit<Player, 'id' | 'status' | 'basePrice'>) => Promise<void>;
   updatePlayer: (player: Player) => Promise<void>;
   updatePlayerPhoto: (playerId: string, photoUrl: string) => Promise<void>;
+  bulkUploadPhotos: (files: FileList) => Promise<void>;
   importPlayers: (players: Omit<Player, 'id' | 'status' | 'basePrice'>[]) => Promise<void>;
   clearAllPlayers: () => Promise<void>;
 
@@ -321,6 +322,16 @@ export function useAuction(): UseAuctionReturn {
     }
   }, []);
 
+  const bulkUploadPhotos = useCallback(async (files: FileList) => {
+    try {
+      await playerApi.bulkUploadPhotos(files);
+      // Server will broadcast the update
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to bulk upload photos');
+      throw err;
+    }
+  }, []);
+
   const importPlayers = useCallback(
     async (newPlayers: Omit<Player, 'id' | 'status' | 'basePrice'>[]) => {
       try {
@@ -438,6 +449,7 @@ export function useAuction(): UseAuctionReturn {
     addPlayer,
     updatePlayer,
     updatePlayerPhoto,
+    bulkUploadPhotos,
     importPlayers,
     clearAllPlayers,
 
