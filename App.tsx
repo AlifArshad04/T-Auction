@@ -7,9 +7,14 @@ import { TeamManagement } from './components/TeamManagement';
 import { Reports } from './components/Reports';
 import { useAuction } from './src/hooks/useAuction';
 
+const ADMIN_PASSWORD = 'admin123'; // Change this to your desired password
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'auction' | 'players' | 'teams' | 'reports'>('auction');
-  const [role, setRole] = useState<UserRole>(UserRole.ADMIN);
+  const [role, setRole] = useState<UserRole>(UserRole.VIEWER);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   const {
     players,
@@ -38,6 +43,67 @@ const App: React.FC = () => {
     setTeams
   } = useAuction();
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      setRole(UserRole.ADMIN);
+      setIsAuthenticated(true);
+      setLoginError('');
+    } else {
+      setLoginError('Incorrect password');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setRole(UserRole.VIEWER);
+    setPassword('');
+    setLoginError('');
+  };
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+          <h1 className="text-2xl font-bold text-center mb-6 text-[#004a99]">Therap Football Auction</h1>
+          <p className="text-center text-gray-600 mb-6">Enter admin password to access admin features</p>
+          
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Admin Password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#004a99] focus:border-transparent"
+                required
+              />
+            </div>
+            {loginError && (
+              <p className="text-red-500 text-sm text-center">{loginError}</p>
+            )}
+            <button
+              type="submit"
+              className="w-full bg-[#004a99] text-white py-2 px-4 rounded-md hover:bg-[#003a7a] transition-colors"
+            >
+              Login as Admin
+            </button>
+          </form>
+          
+          <div className="mt-6 text-center">
+            <button
+              onClick={handleViewerMode}
+              className="text-[#004a99] hover:text-[#003a7a] underline"
+            >
+              Continue as Viewer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading state
   if (isLoading) {
     return (
@@ -57,6 +123,7 @@ const App: React.FC = () => {
       role={role}
       setRole={setRole}
       isConnected={isConnected}
+      onLogout={handleLogout}
     >
       {activeTab === 'auction' && (
         <AuctionDashboard

@@ -9,9 +9,10 @@ interface LayoutProps {
   role: UserRole;
   setRole: (role: UserRole) => void;
   isConnected?: boolean;
+  onLogout?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, role, setRole, isConnected = true }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, role, setRole, isConnected = true, onLogout }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-therap text-white shadow-lg p-4 flex justify-between items-center sticky top-0 z-50">
@@ -52,14 +53,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
         </nav>
 
         <div className="flex items-center space-x-4">
-          <select 
-            value={role}
-            onChange={(e) => setRole(e.target.value as UserRole)}
-            className="bg-blue-800 text-sm border-none rounded px-2 py-1 outline-none"
-          >
-            <option value={UserRole.ADMIN}>Admin Mode</option>
-            <option value={UserRole.VIEWER}>Viewer Mode</option>
-          </select>
+          <span className="text-sm bg-blue-800 px-2 py-1 rounded">
+            {role === UserRole.ADMIN ? 'Admin Mode' : 'Viewer Mode'}
+          </span>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="bg-blue-700 hover:bg-blue-600 text-sm px-3 py-1 rounded transition-colors"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </header>
 
